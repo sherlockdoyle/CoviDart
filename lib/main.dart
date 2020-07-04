@@ -10,7 +10,6 @@ class CovidApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
       home: Scaffold(
         appBar: AppBar(
@@ -111,8 +110,8 @@ class _DataWidgetState extends State<DataWidget> {
           builder: (context, snapshot) {
             if (snapshot.hasData) {
               return Container(
-                height: 400,
-                padding: EdgeInsets.fromLTRB(10, 0, 10, 10),
+                height: 450,
+                padding: EdgeInsets.fromLTRB(10, 0, 0, 10),
                 child: charts.TimeSeriesChart(
                   <charts.Series<Case, DateTime>>[
                     charts.Series(
@@ -144,7 +143,12 @@ class _DataWidgetState extends State<DataWidget> {
                       colorFn: (datum, index) => charts.MaterialPalette.yellow.shadeDefault,
                     ),
                   ],
-                  behaviors: [charts.SeriesLegend()],
+                  behaviors: [
+                    charts.SeriesLegend(
+                      desiredMaxColumns: MediaQuery.of(context).size.width < 375 ? 3 : -1, // hack to wrap the legend
+                      outsideJustification: charts.OutsideJustification.start,
+                    ),
+                  ],
                   animate: true,
                   primaryMeasureAxis: charts.NumericAxisSpec(
                     renderSpec: charts.GridlineRendererSpec(
