@@ -16,8 +16,36 @@ class CovidApp extends StatelessWidget {
         appBar: AppBar(
           title: Text('CoviDart'),
         ),
-        body: Center(
-          child: DataWidget(),
+        body: Column(
+          children: [
+            Container(
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(text: 'Just a sample COVID-19 tracker Flutter app. Find the code at '),
+                    TextSpan(
+                      text: 'https://github.com/sherlockdoyle/covidart',
+                      style: TextStyle(
+                        color: Colors.blue.shade200,
+                        decoration: TextDecoration.underline,
+                      ),
+                      // recognizer: TapGestureRecognizer()  // TODO: Why no work?
+                      //   ..onTap = () async {
+                      //     print('Kojufrsre');
+                      //     const loc = 'https://github.com/sherlockdoyle/covidart';
+                      //     if (await url.canLaunch(loc)) url.launch(loc);
+                      //   },
+                    ),
+                    TextSpan(text: '.'),
+                  ],
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              // child: Text('Just a sample COVID-19 tracker Flutter app.'),
+              padding: EdgeInsets.all(10),
+            ),
+            Expanded(child: Center(child: DataWidget())),
+          ],
         ),
       ),
     );
@@ -85,40 +113,55 @@ class _DataWidgetState extends State<DataWidget> {
               return Container(
                 height: 400,
                 padding: EdgeInsets.fromLTRB(10, 0, 10, 10),
-                child: Card(
-                  child: charts.TimeSeriesChart(
-                    <charts.Series<Case, DateTime>>[
-                      charts.Series(
-                        id: snapshot.data.country.toString(),
-                        data: snapshot.data.cases,
-                        domainFn: (datum, index) => datum.date,
-                        measureFn: (datum, index) => datum.confirmed,
-                        colorFn: (datum, index) => charts.ColorUtil.fromDartColor(Colors.orange),
+                child: charts.TimeSeriesChart(
+                  <charts.Series<Case, DateTime>>[
+                    charts.Series(
+                      id: 'Confirmed',
+                      data: snapshot.data.cases,
+                      domainFn: (datum, index) => datum.date,
+                      measureFn: (datum, index) => datum.confirmed,
+                      colorFn: (datum, index) => charts.MaterialPalette.blue.shadeDefault,
+                    ),
+                    charts.Series(
+                      id: 'Deaths',
+                      data: snapshot.data.cases,
+                      domainFn: (datum, index) => datum.date,
+                      measureFn: (datum, index) => datum.deaths,
+                      colorFn: (datum, index) => charts.MaterialPalette.red.shadeDefault,
+                    ),
+                    charts.Series(
+                      id: 'Recovered',
+                      data: snapshot.data.cases,
+                      domainFn: (datum, index) => datum.date,
+                      measureFn: (datum, index) => datum.recovered,
+                      colorFn: (datum, index) => charts.MaterialPalette.green.shadeDefault,
+                    ),
+                    charts.Series(
+                      id: 'Active',
+                      data: snapshot.data.cases,
+                      domainFn: (datum, index) => datum.date,
+                      measureFn: (datum, index) => datum.active,
+                      colorFn: (datum, index) => charts.MaterialPalette.yellow.shadeDefault,
+                    ),
+                  ],
+                  behaviors: [charts.SeriesLegend()],
+                  animate: true,
+                  primaryMeasureAxis: charts.NumericAxisSpec(
+                    renderSpec: charts.GridlineRendererSpec(
+                      labelStyle: charts.TextStyleSpec(
+                        color: charts.MaterialPalette.white,
                       ),
-                      charts.Series(
-                        id: snapshot.data.country.toString(),
-                        data: snapshot.data.cases,
-                        domainFn: (datum, index) => datum.date,
-                        measureFn: (datum, index) => datum.deaths,
-                        colorFn: (datum, index) => charts.ColorUtil.fromDartColor(Colors.red),
+                      axisLineStyle: charts.LineStyleSpec(
+                        color: charts.MaterialPalette.gray.shadeDefault,
                       ),
-                      charts.Series(
-                        id: snapshot.data.country.toString(),
-                        data: snapshot.data.cases,
-                        domainFn: (datum, index) => datum.date,
-                        measureFn: (datum, index) => datum.recovered,
-                        colorFn: (datum, index) => charts.ColorUtil.fromDartColor(Colors.green),
+                    ),
+                  ),
+                  domainAxis: charts.DateTimeAxisSpec(
+                    renderSpec: charts.GridlineRendererSpec(
+                      labelStyle: charts.TextStyleSpec(
+                        color: charts.MaterialPalette.white,
                       ),
-                      charts.Series(
-                        id: snapshot.data.country.toString(),
-                        data: snapshot.data.cases,
-                        domainFn: (datum, index) => datum.date,
-                        measureFn: (datum, index) => datum.active,
-                        colorFn: (datum, index) => charts.ColorUtil.fromDartColor(Colors.blue),
-                      ),
-                    ],
-                    animate: true,
-                    dateTimeFactory: charts.LocalDateTimeFactory(),
+                    ),
                   ),
                 ),
               );
@@ -132,7 +175,5 @@ class _DataWidgetState extends State<DataWidget> {
     );
   }
 
-  void updateCountryData() => setState(() {
-        data = CovidAPI.getCasesByCountry(selected);
-      });
+  void updateCountryData() => data = CovidAPI.getCasesByCountry(selected)..then((value) => setState(() {}));
 }
