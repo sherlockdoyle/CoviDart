@@ -1,4 +1,4 @@
-# CoviDart
+# covidart
 Just a sample COVID-19 tracker Flutter app
 
 This is just a sample project I'm working on while learning Flutter. I'm mainly focusing on the web-app. For the COVID-19 data I'm using the [Coronavirus COVID19 API](https://documenter.getpostman.com/view/10808728/SzS8rjbc).
