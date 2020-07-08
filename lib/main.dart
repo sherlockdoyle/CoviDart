@@ -1,8 +1,12 @@
+import 'dart:html' as html; // currently web only
 import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:searchable_dropdown/searchable_dropdown.dart';
 import 'package:charts_flutter/flutter.dart' as charts;
+import 'package:table_sticky_headers/table_sticky_headers.dart';
 
 import 'covidAPI.dart';
 
@@ -16,6 +20,15 @@ class CovidApp extends StatelessWidget {
       appBar: AppBar(
         title: Text('CoviDart'),
         actions: [
+          IconButton(
+            icon: Icon(Icons.table_chart),
+            tooltip: 'Tabular view',
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TabularView(key.currentState.selected),
+                )),
+          ),
           IconButton(
             icon: Icon(Icons.show_chart),
             tooltip: 'Predictions',
@@ -40,19 +53,18 @@ class CovidApp extends StatelessWidget {
                       color: Colors.blue.shade200,
                       decoration: TextDecoration.underline,
                     ),
-                    // recognizer: TapGestureRecognizer()  // TODO: Why no work?
-                    //   ..onTap = () async {
-                    //     print('Kojufrsre');
-                    //     const loc = 'https://github.com/sherlockdoyle/covidart';
-                    //     if (await url.canLaunch(loc)) url.launch(loc);
-                    //   },
+                    recognizer: TapGestureRecognizer()
+                      ..onTap = () async {
+                        const loc = 'https://github.com/sherlockdoyle/covidart';
+                        // if (await url.canLaunch(loc)) url.launch(loc);  // TODO: Why no work?
+                        html.window.open(loc, 'covidart');
+                      },
                   ),
                   TextSpan(text: '.'),
                 ],
                 style: TextStyle(color: Colors.white),
               ),
             ),
-            // child: Text('Just a sample COVID-19 tracker Flutter app.'),
             padding: EdgeInsets.all(10),
           ),
           Expanded(child: Center(child: DataWidget(key))),
@@ -114,9 +126,7 @@ class _DataWidgetState extends State<DataWidget> {
             return CircularProgressIndicator();
           },
         ),
-        SizedBox(
-          height: 10,
-        ),
+        SizedBox(height: 10),
         FutureBuilder<CountryCase>(
           future: data,
           builder: (context, snapshot) {
@@ -233,6 +243,74 @@ class ChartWidget extends StatelessWidget {
   }
 }
 
+class TabularView extends StatelessWidget {
+  Future<CountryCase> cases;
+  final int numPredictions;
+  Case predicted;
+  TabularView(Country country, [this.numPredictions = 1]) {
+    cases = CovidAPI.getCasesByCountry(country);
+    try {
+      final predictedCases = CovidAPI.getPredictionsForCountry(country).cases;
+      predicted = predictedCases[predictedCases.length - 1];
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Cases Till Date')),
+      body: FutureBuilder<CountryCase>(
+        // TODO: Need to center this
+        future: cases,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            final numRows = snapshot.data.cases.length;
+            return StickyHeadersTable(
+              rowsLength: numRows,
+              columnsLength: 4,
+              rowsTitleBuilder: (i) {
+                if (i == 0)
+                  return predicted == null
+                      ? Text('Failed', style: TextStyle(color: Colors.red))
+                      : Text(
+                          DateFormat.yMMMd().format(predicted.date) + '\n(Predicted)',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.purple.shade200,
+                          ),
+                        );
+                return Text(
+                  DateFormat.yMMMd().format(snapshot.data.cases[numRows - i].date),
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                );
+              },
+              columnsTitleBuilder: (j) => Text(
+                ['Deaths', 'Recovered', 'Active', 'Confirmed'][j],
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              contentCellBuilder: (j, i) {
+                if (i == 0)
+                  return predicted == null
+                      ? Text(['to', 'make', 'predictions', '☹'][j], style: TextStyle(color: Colors.red))
+                      : Text(
+                          [predicted.deaths, predicted.recovered, predicted.active, predicted.confirmed][j].toString(),
+                          style: TextStyle(color: Colors.purple.shade200),
+                        );
+                final casei = snapshot.data.cases[numRows - i];
+                return Text([casei.deaths, casei.recovered, casei.active, casei.confirmed][j].toString());
+              },
+              legendCell: Text(snapshot.data.country.toString()),
+            );
+          } else if (snapshot.hasError) return Text('${snapshot.error}', style: TextStyle(color: Colors.red));
+          return CircularProgressIndicator();
+        },
+      ),
+    );
+  }
+}
+
 class PredictionView extends StatelessWidget {
   final Country country;
   CountryCase cases;
@@ -270,10 +348,29 @@ class PredictionView extends StatelessWidget {
               ),
             ),
             cases == null
-                ? Text(
-                    'Failed to make predictions ☹',
-                    style: TextStyle(color: Colors.red),
-                  )
+                ? () {
+                    List<Widget> children = [
+                      Text(
+                        'Failed to make predictions ☹',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ];
+                    if (country.iso2 == 'GB') {
+                      children.add(SizedBox(height: 25));
+                      children.add(Text(
+                        'You seem to be trying to check the predictions for $country. This is not possible because of the absence of data.',
+                        style: Theme.of(context).textTheme.bodyText1,
+                        textAlign: TextAlign.center,
+                      ));
+                      children.add(RaisedButton(
+                        child: Text('Read this'),
+                        onPressed: () => html.window.open(
+                            'https://www.theguardian.com/world/2020/jun/18/health-experts-criticise-uk-failure-track-recovered-covid-19-cases',
+                            'Problem'),
+                      ));
+                    }
+                    return Column(children: children);
+                  }() //https://www.theguardian.com/world/2020/jun/18/health-experts-criticise-uk-failure-track-recovered-covid-19-cases
                 : Column(
                     children: [
                       ChartWidget(cases, 1),
@@ -299,7 +396,7 @@ class PredictionView extends StatelessWidget {
                               ),
                               TextSpan(
                                   text:
-                                      ' ${extra.active < 0 ? "fewer" : "new"} active cases for the next day. This will lead to a total of '),
+                                      ' ${extra.active < 0 ? "fewer" : "new"} active cases for ${DateFormat.yMMMd().format(extra.date)}. This will lead to a total of '),
                               TextSpan(
                                 text: newest.deaths.toString(),
                                 style: TextStyle(fontWeight: FontWeight.bold),
